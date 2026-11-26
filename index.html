@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reading Studio — Interactive Books &amp; Word Pronunciation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'Segoe UI', 'system-ui', 'sans-serif'],
+            urdu: ['Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', 'Segoe UI', 'sans-serif'],
+          },
+          boxShadow: {
+            soft: '0 10px 30px -10px rgba(15, 23, 42, 0.08)',
+            card: '0 8px 26px -8px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04)',
+            float: '0 26px 65px -15px rgba(15, 23, 42, 0.24)',
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      background:
+        radial-gradient(circle at 8% 6%, rgba(79, 70, 229, 0.14), transparent 36%),
+        radial-gradient(circle at 92% 10%, rgba(236, 72, 153, 0.13), transparent 34%),
+        radial-gradient(circle at 84% 88%, rgba(16, 185, 129, 0.13), transparent 38%),
+        radial-gradient(circle at 14% 90%, rgba(245, 158, 11, 0.13), transparent 35%),
+        #f8fafc;
+      min-height: 100vh;
+    }
+
+    .urdu-text {
+      font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', 'Segoe UI', sans-serif;
+      direction: rtl;
+      line-height: 2.05;
+    }
+
+    .book-card {
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+    }
+
+    .book-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 22px 42px -12px rgba(15, 23, 42, 0.15);
+    }
+
+    .clickable-word {
+      border-radius: 6px;
+      padding: 0 2px;
+      cursor: pointer;
+      transition: background-color 0.14s ease, color 0.14s ease;
+    }
+
+    .clickable-word:hover {
+      background-color: rgba(99, 102, 241, 0.16);
+      color: #3730a3;
+    }
+
+    .speaking-word {
+      background-color: #fef08a !important;
+      color: #0f172a !important;
+      box-shadow: 0 0 0 2px #f59e0b;
+    }
+
+    .reader-prose h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 0.9rem;
+      line-height: 1.3;
+    }
+
+    .reader-prose h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #312e81;
+      margin-top: 1.4rem;
+      margin-bottom: 0.65rem;
+      line-height: 1.4;
+    }
+
+    .reader-prose h3 {
+      font-size: 1.12rem;
+      font-weight: 700;
+      color: #0f766e;
+      margin-top: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .reader-prose p {
+      font-size: 1.125rem;
+      line-height: 1.95;
+      color: #1e293b;
+      margin-bottom: 1rem;
+    }
+
+    .reader-prose ul, .reader-prose ol {
+      padding-left: 1.4rem;
+      margin-bottom: 1rem;
+      list-style: disc;
+    }
+
+    .reader-prose li {
+      font-size: 1.08rem;
+      line-height: 1.85;
+      color: #1e293b;
+      margin-bottom: 0.35rem;
+    }
+
+    .reader-prose hr {
+      border: 0;
+      height: 1px;
+      background: linear-gradient(to right, transparent, #cbd5e1, transparent);
+      margin: 1.5rem 0;
+    }
+
+    @keyframes modalPop {
+      from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-animate {
+      animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- ==================== LIBRARY / BOOKS CATALOG VIEW ==================== -->
+  <div id="catalogView" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Top Header & Filter Card (No Navbar / No Sidebar) -->
+    <section class="bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-5 sm:p-7 shadow-soft mb-8">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 mb-5 border-b border-slate-100">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase bg-gradient-to-r from-indigo-500/10 via-fuchsia-500/10 to-emerald-500/10 text-indigo-700 border border-indigo-200/70 mb-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Interactive English Reading Library
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-700 via-purple-600 to-rose-600 bg-clip-text text-transparent">
+            English Reading Studio
+          </h1>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5 text-xs sm:text-sm font-semibold">
+          <span class="px-3.5 py-2 rounded-2xl bg-indigo-50 text-indigo-800 border border-indigo-200/80">
+            📖 <strong id="totalBooksCount">0</strong> Books Available
+          </span>
+          <span class="px-3.5 py-2 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200/80">
+            🔊 Tap any word while reading to hear pronunciation
+          </span>
+        </div>
+      </div>
+
+      <!-- Filter & Search Controls -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+        <div class="md:col-span-4">
+          <label for="monthFilter" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            Filter by Month
+          </label>
+          <select id="monthFilter" class="w-full rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-b from-white to-indigo-50/40 px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 transition cursor-pointer">
+            <option value="__ALL__">All Months</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-8">
+          <label for="bookSearchInput" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            Search Book Title, Author, or Description
+          </label>
+          <div class="relative">
+            <input
+              id="bookSearchInput"
+              type="text"
+              placeholder="Search by book name, author, ID, or topic..."
+              class="w-full rounded-2xl border-2 border-emerald-200/90 bg-gradient-to-b from-white to-emerald-50/30 pl-10 pr-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 transition"
+            />
+            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Status / Error Message -->
+    <div id="catalogStatus" class="hidden bg-white border border-slate-200 rounded-3xl p-10 text-center shadow-card mb-8"></div>
+
+    <!-- Books Grid -->
+    <section id="booksGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></section>
+  </div>
+
+  <!-- ==================== FULL READER SCREEN VIEW ==================== -->
+  <div id="readerView" class="hidden min-h-screen bg-slate-50/95">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <!-- Reader Top Action Bar -->
+      <header class="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-soft mb-6 flex flex-wrap items-center justify-between gap-3 sticky top-4 z-30">
+        <div class="flex items-center gap-3 min-w-0">
+          <button
+            id="backToLibraryBtn"
+            type="button"
+            class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-extrabold transition cursor-pointer shrink-0"
+          >
+            <span>← Books</span>
+          </button>
+
+          <button
+            id="toggleTocBtn"
+            type="button"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-sm font-extrabold shadow-sm transition cursor-pointer shrink-0"
+          >
+            <span>📑 Index / Topics</span>
+            <span id="tocToggleIndicator" class="text-xs bg-white/20 px-2 py-0.5 rounded-full">Open</span>
+          </button>
+
+          <div class="min-w-0">
+            <h2 id="readerBookTitle" class="text-lg sm:text-xl font-extrabold text-slate-900 truncate">Book Title</h2>
+            <p id="readerBookAuthor" class="text-xs font-semibold text-slate-500 truncate">Author</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span id="lastSpokenBadge" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold">
+            🔊 Tap any English word to pronounce
+          </span>
+        </div>
+      </header>
+
+      <!-- Reader Body: Collapsible TOC Drawer/Panel + Reading Content -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Collapsible Table of Contents (فہرست) -->
+        <aside id="tocPanel" class="lg:col-span-4 bg-white rounded-3xl border border-slate-200/90 shadow-card p-5 lg:sticky lg:top-28 max-h-[78vh] overflow-y-auto">
+          <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+            <div>
+              <div class="text-xs font-extrabold uppercase tracking-wider text-indigo-600">Table of Contents</div>
+              <h3 class="text-base font-extrabold text-slate-900">فہرست / Topics (<span id="tocCount">0</span>)</h3>
+            </div>
+            <button id="closeTocInsideBtn" type="button" class="lg:hidden w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold flex items-center justify-center cursor-pointer">
+              ✕
+            </button>
+          </div>
+          <nav id="tocList" class="space-y-2"></nav>
+        </aside>
+
+        <!-- Main Book Reading Canvas -->
+        <article id="readerContentColumn" class="lg:col-span-8 bg-white rounded-3xl border border-slate-200/90 shadow-card p-6 sm:p-10">
+          <div id="readerBookMetaBanner" class="rounded-2xl p-5 mb-8 bg-gradient-to-r from-indigo-50 via-purple-50/60 to-rose-50/50 border border-indigo-100"></div>
+          <div id="readerTopicsContainer" class="space-y-10"></div>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== BOOK INFO POPUP MODAL ==================== -->
+  <div id="bookInfoModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="modal-animate relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-float border border-slate-100">
+      <div id="infoModalAccent" class="h-3 w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-rose-600"></div>
+      <div id="bookInfoContent" class="p-6 sm:p-8"></div>
+    </div>
+  </div>
+
+  <script>
+    const CARD_THEMES = [
+      {
+        gradient: 'from-indigo-600 via-blue-600 to-cyan-500',
+        badge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        topBar: 'border-t-4 border-t-indigo-600',
+        btn: 'from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700'
+      },
+      {
+        gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
+        badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        topBar: 'border-t-4 border-t-emerald-600',
+        btn: 'from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700'
+      },
+      {
+        gradient: 'from-fuchsia-600 via-pink-600 to-rose-500',
+        badge: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
+        topBar: 'border-t-4 border-t-fuchsia-600',
+        btn: 'from-fuchsia-600 to-rose-600 hover:from-fuchsia-700 hover:to-rose-700'
+      },
+      {
+        gradient: 'from-amber-500 via-orange-500 to-rose-500',
+        badge: 'bg-amber-50 text-amber-800 border-amber-200',
+        topBar: 'border-t-4 border-t-amber-500',
+        btn: 'from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700'
+      },
+      {
+        gradient: 'from-violet-600 via-purple-600 to-indigo-600',
+        badge: 'bg-violet-50 text-violet-700 border-violet-200',
+        topBar: 'border-t-4 border-t-violet-600',
+        btn: 'from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700'
+      }
+    ];
+
+    let readingData = null;
+    let filteredBooks = [];
+    let activeBookObj = null;
+    let isTocOpen = true;
+
+    const catalogView = document.getElementById('catalogView');
+    const readerView = document.getElementById('readerView');
+    const booksGrid = document.getElementById('booksGrid');
+    const catalogStatus = document.getElementById('catalogStatus');
+    const totalBooksCount = document.getElementById('totalBooksCount');
+    const monthFilter = document.getElementById('monthFilter');
+    const bookSearchInput = document.getElementById('bookSearchInput');
+    const bookInfoModal = document.getElementById('bookInfoModal');
+    const bookInfoContent = document.getElementById('bookInfoContent');
+    const infoModalAccent = document.getElementById('infoModalAccent');
+
+    const backToLibraryBtn = document.getElementById('backToLibraryBtn');
+    const toggleTocBtn = document.getElementById('toggleTocBtn');
+    const closeTocInsideBtn = document.getElementById('closeTocInsideBtn');
+    const tocToggleIndicator = document.getElementById('tocToggleIndicator');
+    const tocPanel = document.getElementById('tocPanel');
+    const readerContentColumn = document.getElementById('readerContentColumn');
+    const tocList = document.getElementById('tocList');
+    const tocCount = document.getElementById('tocCount');
+    const readerBookTitle = document.getElementById('readerBookTitle');
+    const readerBookAuthor = document.getElementById('readerBookAuthor');
+    const readerBookMetaBanner = document.getElementById('readerBookMetaBanner');
+    const readerTopicsContainer = document.getElementById('readerTopicsContainer');
+    const lastSpokenBadge = document.getElementById('lastSpokenBadge');
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function speakWord(rawWord, el) {
+      const cleaned = (rawWord || '')
+        .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '')
+        .trim();
+      const textToSpeak = cleaned || (rawWord || '').trim();
+      if (!textToSpeak) return;
+
+      if (!('speechSynthesis' in window)) {
+        alert('Speech synthesis is not supported in this browser.');
+        return;
+      }
+
+      document.querySelectorAll('.speaking-word').forEach(node => node.classList.remove('speaking-word'));
+      if (el) el.classList.add('speaking-word');
+
+      lastSpokenBadge.textContent = `🔊 "${textToSpeak}"`;
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.92;
+
+      const voices = window.speechSynthesis.getVoices();
+      const preferred =
+        voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en-') && /natural|google|microsoft/i.test(v.name)) ||
+        voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+      if (preferred) utterance.voice = preferred;
+
+      utterance.onend = () => {
+        if (el) el.classList.remove('speaking-word');
+      };
+      utterance.onerror = () => {
+        if (el) el.classList.remove('speaking-word');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    /**
+     * Wraps text nodes inside an HTML element into clickable word spans
+     * while preserving Markdown-rendered tags (headings, bold, lists, emojis).
+     */
+    function makeWordsClickable(containerEl) {
+      const skipTags = new Set(['SCRIPT', 'STYLE', 'BUTTON', 'SVG', 'PATH', 'CODE', 'PRE']);
+      const walker = document.createTreeWalker(containerEl, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          let parent = node.parentElement;
+          while (parent && parent !== containerEl) {
+            if (skipTags.has(parent.tagName)) return NodeFilter.FILTER_REJECT;
+            parent = parent.parentElement;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+
+      const textNodes = [];
+      let current;
+      while ((current = walker.nextNode())) {
+        textNodes.push(current);
+      }
+
+      for (const textNode of textNodes) {
+        const raw = textNode.nodeValue;
+        const parts = raw.split(/(\s+)/);
+        const frag = document.createDocumentFragment();
+
+        for (const token of parts) {
+          if (!token) continue;
+          if (/^\s+$/.test(token)) {
+            frag.appendChild(document.createTextNode(token));
+            continue;
+          }
+
+          const hasWordChar = /[\p{L}\p{N}]/u.test(token);
+          if (hasWordChar) {
+            const span = document.createElement('span');
+            span.className = 'clickable-word';
+            span.textContent = token;
+            span.title = `Click to pronounce: ${token}`;
+            frag.appendChild(span);
+          } else {
+            frag.appendChild(document.createTextNode(token));
+          }
+        }
+
+        textNode.parentNode.replaceChild(frag, textNode);
+      }
+    }
+
+    function populateMonthFilter(books) {
+      const months = [];
+      const seen = new Set();
+      for (const b of books) {
+        const m = (b['Book-Month'] || '').trim();
+        if (m && !seen.has(m)) {
+          seen.add(m);
+          months.push(m);
+        }
+      }
+      monthFilter.innerHTML = [
+        '<option value="__ALL__">All Months</option>',
+        ...months.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`)
+      ].join('');
+    }
+
+    function renderBooksGrid() {
+      const allBooks = readingData?.books || [];
+      totalBooksCount.textContent = allBooks.length;
+
+      const selectedMonth = monthFilter.value;
+      const query = bookSearchInput.value.trim().toLowerCase();
+
+      filteredBooks = allBooks.filter(b => {
+        const monthMatch = selectedMonth === '__ALL__' || (b['Book-Month'] || '').trim() === selectedMonth;
+        const textMatch = !query || Object.values(b).some(val => {
+          if (Array.isArray(val)) return false;
+          return String(val ?? '').toLowerCase().includes(query);
+        });
+        return monthMatch && textMatch;
+      });
+
+      if (filteredBooks.length === 0) {
+        booksGrid.innerHTML = '';
+        catalogStatus.classList.remove('hidden');
+        catalogStatus.innerHTML = `
+          <div class="text-4xl mb-3">📚</div>
+          <h3 class="text-lg font-bold text-slate-800 mb-1">No books match your filter</h3>
+          <p class="text-sm text-slate-500">Try selecting another month or clearing the search bar.</p>
+        `;
+        return;
+      }
+
+      catalogStatus.classList.add('hidden');
+      booksGrid.innerHTML = filteredBooks.map((book, idx) => {
+        const theme = CARD_THEMES[idx % CARD_THEMES.length];
+        const topicsCount = Array.isArray(book.topics) ? book.topics.length : (book['Book-Total-Topics'] || 0);
+        const month = book['Book-Month'] || '';
+        const week = book['Book-Week'] ?? '';
+        const author = book['Book-Author'] || '';
+        const desc = book['Book-Description'] || '';
+
+        return `
+          <article data-book-index="${idx}" class="book-card bg-white rounded-3xl p-6 shadow-card border border-slate-100 ${theme.topBar} flex flex-col justify-between cursor-pointer">
+            <div>
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <span class="px-3 py-1 rounded-full text-xs font-extrabold border ${theme.badge}">
+                  ${escapeHtml(book['Book-ID'] || 'BOOK')}
+                </span>
+                <div class="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                  ${month ? `<span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">${escapeHtml(month)}</span>` : ''}
+                  ${week !== '' ? `<span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">Wk ${escapeHtml(week)}</span>` : ''}
+                </div>
+              </div>
+
+              <h2 class="text-xl font-extrabold text-slate-900 mb-1.5 leading-snug">
+                ${escapeHtml(book['Book-Name'] || 'Untitled Book')}
+              </h2>
+
+              ${author ? `<p class="urdu-text text-base font-bold text-indigo-900 mb-3">${escapeHtml(author)}</p>` : ''}
+
+              ${desc ? `<p class="text-sm text-slate-600 leading-relaxed line-clamp-3 mb-4">${escapeHtml(desc)}</p>` : ''}
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-500">
+                📑 ${escapeHtml(topicsCount)} Topics
+              </span>
+              <span class="inline-flex items-center gap-1 text-xs font-extrabold bg-gradient-to-r ${theme.gradient} bg-clip-text text-transparent">
+                Book Details →
+              </span>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function openBookInfoPopup(book, idx = 0) {
+      const theme = CARD_THEMES[idx % CARD_THEMES.length];
+      infoModalAccent.className = `h-3 w-full bg-gradient-to-r ${theme.gradient}`;
+      const topicsCount = Array.isArray(book.topics) ? book.topics.length : (book['Book-Total-Topics'] || 0);
+
+      bookInfoContent.innerHTML = `
+        <div class="flex items-start justify-between gap-4 pb-4 mb-5 border-b border-slate-100">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-3 py-1 rounded-full text-xs font-extrabold border ${theme.badge}">
+              ${escapeHtml(book['Book-ID'] || 'Book')}
+            </span>
+            ${book['Book-Month'] ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">${escapeHtml(book['Book-Month'])}</span>` : ''}
+            ${book['Created-Date'] ? `<span class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-500 border border-slate-200">${escapeHtml(book['Created-Date'])}</span>` : ''}
+          </div>
+          <button id="closeInfoModalBtn" type="button" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 flex items-center justify-center font-bold transition cursor-pointer shrink-0" aria-label="Close">
+            ✕
+          </button>
+        </div>
+
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2">
+          ${escapeHtml(book['Book-Name'] || 'Untitled Book')}
+        </h2>
+
+        ${book['Book-Author'] ? `
+          <div class="mb-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Author</span>
+            <p class="urdu-text text-xl font-bold text-indigo-950">${escapeHtml(book['Book-Author'])}</p>
+          </div>
+        ` : ''}
+
+        ${book['Book-Description'] ? `
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 mb-5">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Description</div>
+            <p class="text-sm sm:text-base text-slate-700 leading-relaxed">${escapeHtml(book['Book-Description'])}</p>
+          </div>
+        ` : ''}
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-7">
+          <div class="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100">
+            <div class="text-xs font-bold text-indigo-600">Total Topics</div>
+            <div class="text-lg font-extrabold text-slate-900">${escapeHtml(topicsCount)}</div>
+          </div>
+          <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+            <div class="text-xs font-bold text-emerald-700">Month</div>
+            <div class="text-lg font-extrabold text-slate-900">${escapeHtml(book['Book-Month'] || '—')}</div>
+          </div>
+          <div class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-100 col-span-2 sm:col-span-1">
+            <div class="text-xs font-bold text-amber-700">Week</div>
+            <div class="text-lg font-extrabold text-slate-900">${escapeHtml(book['Book-Week'] ?? '—')}</div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <button id="cancelInfoModalBtn" type="button" class="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold transition cursor-pointer">
+            Close
+          </button>
+          <button id="startReadingBtn" type="button" class="px-6 py-3 rounded-2xl bg-gradient-to-r ${theme.btn} text-white text-sm font-extrabold shadow-md transition cursor-pointer inline-flex items-center gap-2">
+            <span>📖 Reading</span>
+            <span>→</span>
+          </button>
+        </div>
+      `;
+
+      bookInfoModal.classList.remove('hidden');
+      bookInfoModal.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+
+      document.getElementById('closeInfoModalBtn')?.addEventListener('click', closeBookInfoPopup);
+      document.getElementById('cancelInfoModalBtn')?.addEventListener('click', closeBookInfoPopup);
+      document.getElementById('startReadingBtn')?.addEventListener('click', () => {
+        const targetBook = book;
+        closeBookInfoPopup();
+        openReaderScreen(targetBook);
+      });
+    }
+
+    function closeBookInfoPopup() {
+      bookInfoModal.classList.add('hidden');
+      bookInfoModal.classList.remove('flex');
+      document.body.style.overflow = '';
+    }
+
+    function setTocVisibility(open) {
+      isTocOpen = open;
+      if (isTocOpen) {
+        tocPanel.classList.remove('hidden');
+        readerContentColumn.className = 'lg:col-span-8 bg-white rounded-3xl border border-slate-200/90 shadow-card p-6 sm:p-10';
+        tocToggleIndicator.textContent = 'Open';
+      } else {
+        tocPanel.classList.add('hidden');
+        readerContentColumn.className = 'lg:col-span-12 bg-white rounded-3xl border border-slate-200/90 shadow-card p-6 sm:p-10';
+        tocToggleIndicator.textContent = 'Closed';
+      }
+    }
+
+    function openReaderScreen(book) {
+      activeBookObj = book;
+      const topics = Array.isArray(book.topics) ? book.topics : [];
+
+      readerBookTitle.textContent = book['Book-Name'] || 'Untitled Book';
+      readerBookAuthor.textContent = book['Book-Author'] || '';
+      tocCount.textContent = topics.length;
+
+      readerBookMetaBanner.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-indigo-600 text-white mr-2">
+              ${escapeHtml(book['Book-ID'] || '')}
+            </span>
+            <span class="text-xs font-bold text-indigo-900">
+              ${escapeHtml(book['Book-Month'] || '')} ${book['Book-Week'] !== undefined ? `· Week ${escapeHtml(book['Book-Week'])}` : ''}
+            </span>
+          </div>
+          <span class="text-xs font-bold text-slate-600">${topics.length} Topics</span>
+        </div>
+        ${book['Book-Description'] ? `<p class="text-sm text-slate-700 mt-2.5 leading-relaxed">${escapeHtml(book['Book-Description'])}</p>` : ''}
+      `;
+
+      // Render Table of Contents (فہرست)
+      if (topics.length === 0) {
+        tocList.innerHTML = `<p class="text-sm text-slate-400 py-4 text-center">No topics found for this book.</p>`;
+      } else {
+        tocList.innerHTML = topics.map((t, idx) => {
+          const anchorId = `topic-sec-${t['Topic-ID'] || t['Topic-No'] || idx}`;
+          return `
+            <a
+              href="#${escapeHtml(anchorId)}"
+              data-scroll-target="${escapeHtml(anchorId)}"
+              class="toc-link flex items-start gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-200/70 hover:border-indigo-300 transition group"
+            >
+              <span class="w-7 h-7 rounded-xl bg-indigo-600 group-hover:bg-purple-600 text-white text-xs font-extrabold flex items-center justify-center shrink-0 mt-0.5 transition">
+                ${escapeHtml(t['Topic-No'] || (idx + 1))}
+              </span>
+              <span class="text-sm font-bold text-slate-800 group-hover:text-indigo-900 leading-snug">
+                ${escapeHtml(t['Topic-Title'] || `Topic ${idx + 1}`)}
+              </span>
+            </a>
+          `;
+        }).join('');
+      }
+
+      // Render Topics & Markdown Content
+      if (topics.length === 0) {
+        readerTopicsContainer.innerHTML = `
+          <div class="text-center py-12 text-slate-500">
+            <div class="text-4xl mb-2">📄</div>
+            <p class="font-bold">No reading content available yet for this book.</p>
+          </div>
+        `;
+      } else {
+        readerTopicsContainer.innerHTML = topics.map((t, idx) => {
+          const anchorId = `topic-sec-${t['Topic-ID'] || t['Topic-No'] || idx}`;
+          const mdText = t['Topic-Content'] || '';
+          const renderedMd = typeof marked !== 'undefined'
+            ? marked.parse(mdText)
+            : `<p>${escapeHtml(mdText)}</p>`;
+
+          return `
+            <section id="${escapeHtml(anchorId)}" class="scroll-mt-28 pb-8 border-b border-slate-100 last:border-b-0">
+              <div class="flex flex-wrap items-center gap-2.5 mb-4">
+                <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-100 text-indigo-800">
+                  Topic ${escapeHtml(t['Topic-No'] || (idx + 1))}
+                </span>
+                ${t['Topic-ID'] ? `<span class="text-xs font-semibold text-slate-400">${escapeHtml(t['Topic-ID'])}</span>` : ''}
+              </div>
+              <h3 class="text-2xl font-extrabold text-slate-900 mb-4 pb-2 border-b border-slate-100">
+                ${escapeHtml(t['Topic-Title'] || '')}
+              </h3>
+              <div class="reader-prose topic-md-body">${renderedMd}</div>
+            </section>
+          `;
+        }).join('');
+
+        // Make every word inside all rendered topics clickable for pronunciation
+        readerTopicsContainer.querySelectorAll('.topic-md-body').forEach(bodyEl => {
+          makeWordsClickable(bodyEl);
+        });
+      }
+
+      setTocVisibility(true);
+      catalogView.classList.add('hidden');
+      readerView.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function backToCatalog() {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      readerView.classList.add('hidden');
+      catalogView.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function initReadingStudio() {
+      try {
+        const res = await fetch('./reading_demo.json', { cache: 'no-store' });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} — Could not load reading_demo.json`);
+        }
+        readingData = await res.json();
+        const books = readingData?.books || [];
+        populateMonthFilter(books);
+        renderBooksGrid();
+      } catch (err) {
+        catalogStatus.classList.remove('hidden');
+        catalogStatus.innerHTML = `
+          <div class="text-4xl mb-3">⚠️</div>
+          <h3 class="text-lg font-bold text-rose-700 mb-2">Unable to load reading_demo.json</h3>
+          <p class="text-sm text-slate-600 max-w-lg mx-auto mb-3">
+            Make sure <code class="px-1.5 py-0.5 bg-slate-100 rounded font-mono">index.html</code> and
+            <code class="px-1.5 py-0.5 bg-slate-100 rounded font-mono">reading_demo.json</code> are in the same folder and opened via <strong>Live Server</strong>.
+          </p>
+          <p class="text-xs text-slate-400 font-mono">${escapeHtml(err.message)}</p>
+        `;
+      }
+    }
+
+    monthFilter.addEventListener('change', renderBooksGrid);
+    bookSearchInput.addEventListener('input', renderBooksGrid);
+
+    toggleTocBtn.addEventListener('click', () => {
+      setTocVisibility(!isTocOpen);
+    });
+
+    closeTocInsideBtn.addEventListener('click', () => {
+      setTocVisibility(false);
+    });
+
+    backToLibraryBtn.addEventListener('click', backToCatalog);
+
+    document.addEventListener('click', (e) => {
+      // Smooth scroll when clicking a topic in فہرست (TOC)
+      const tocLink = e.target.closest('.toc-link');
+      if (tocLink) {
+        e.preventDefault();
+        const targetId = tocLink.getAttribute('data-scroll-target');
+        const targetEl = targetId ? document.getElementById(targetId) : null;
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (window.innerWidth < 1024) {
+            setTocVisibility(false);
+          }
+        }
+        return;
+      }
+
+      // Clickable word pronunciation inside reading content
+      const wordSpan = e.target.closest('.clickable-word');
+      if (wordSpan) {
+        speakWord(wordSpan.textContent || '', wordSpan);
+        return;
+      }
+
+      // Open Book Info Popup when clicking a book card
+      const bookCard = e.target.closest('[data-book-index]');
+      if (bookCard) {
+        const idx = Number(bookCard.getAttribute('data-book-index'));
+        const book = filteredBooks[idx];
+        if (book) {
+          openBookInfoPopup(book, idx);
+        }
+      }
+    });
+
+    bookInfoModal.addEventListener('click', (e) => {
+      if (e.target === bookInfoModal) closeBookInfoPopup();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !bookInfoModal.classList.contains('hidden')) {
+        closeBookInfoPopup();
+      }
+    });
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+    }
+
+    initReadingStudio();
+  </script>
+</body>
+</html>

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reading Practice — Interactive English Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'Segoe UI', 'system-ui', 'sans-serif'],
+            urdu: ['Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', 'Segoe UI', 'sans-serif'],
+          },
+          boxShadow: {
+            soft: '0 10px 30px -10px rgba(15, 23, 42, 0.08)',
+            card: '0 8px 26px -8px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04)',
+            float: '0 26px 65px -15px rgba(15, 23, 42, 0.24)',
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      background:
+        radial-gradient(circle at 8% 6%, rgba(79, 70, 229, 0.14), transparent 36%),
+        radial-gradient(circle at 92% 10%, rgba(236, 72, 153, 0.13), transparent 34%),
+        radial-gradient(circle at 84% 88%, rgba(16, 185, 129, 0.13), transparent 38%),
+        radial-gradient(circle at 14% 90%, rgba(245, 158, 11, 0.13), transparent 35%),
+        #f8fafc;
+      min-height: 100vh;
+    }
+
+    .urdu-text {
+      font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', 'Segoe UI', sans-serif;
+      direction: rtl;
+      line-height: 2.05;
+    }
+
+    .reader-prose h1 { font-size: 1.75rem; font-weight: 800; color: #0f172a; margin-bottom: 0.9rem; line-height: 1.3; }
+    .reader-prose h2 { font-size: 1.35rem; font-weight: 800; color: #312e81; margin-top: 1.4rem; margin-bottom: 0.65rem; line-height: 1.4; }
+    .reader-prose h3 { font-size: 1.12rem; font-weight: 700; color: #0f766e; margin-top: 1.1rem; margin-bottom: 0.5rem; }
+    .reader-prose p { font-size: 1.125rem; line-height: 1.95; color: #1e293b; margin-bottom: 1rem; }
+    .reader-prose ul, .reader-prose ol { padding-left: 1.4rem; margin-bottom: 1rem; list-style: disc; }
+    .reader-prose li { font-size: 1.08rem; line-height: 1.85; color: #1e293b; margin-bottom: 0.35rem; }
+    .reader-prose hr { border: 0; height: 1px; background: linear-gradient(to right, transparent, #cbd5e1, transparent); margin: 1.5rem 0; }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+      70% { transform: scale(1); box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+      100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .recording-pulse {
+      animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- ==================== SELECTION VIEW ==================== -->
+  <div id="selectionView" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <a href="index.html" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 text-sm font-bold shadow-sm hover:bg-slate-50 transition mb-6">
+      <span>← Back to Library</span>
+    </a>
+
+    <div class="bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-soft">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase bg-gradient-to-r from-emerald-500/10 via-indigo-500/10 to-fuchsia-500/10 text-indigo-700 border border-indigo-200/70 mb-3">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          Reading Practice Studio
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-700 via-purple-600 to-rose-600 bg-clip-text text-transparent mb-2 urdu-text">
+          مشقِ خواندگی
+        </h1>
+        <p class="text-slate-500 text-sm sm:text-base">Select a book and topic to start your interactive reading practice.</p>
+      </div>
+
+      <div id="selectionError" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-4 mb-6 text-center">
+        <p class="text-rose-700 font-bold text-sm">Failed to load books. Please ensure <code class="bg-rose-100 px-1 rounded">reading_demo.json</code> is in the same folder and you are using a local server.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Select Book / کتاب منتخب کریں</label>
+          <select id="bookSelect" class="w-full rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-b from-white to-indigo-50/40 px-4 py-3.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 transition cursor-pointer">
+            <option value="">-- Choose a Book --</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Select Topic / موضوع منتخب کریں</label>
+          <select id="topicSelect" disabled class="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-400 focus:outline-none transition cursor-not-allowed">
+            <option value="">-- First select a book --</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <button id="startPracticeBtn" disabled class="px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-base font-extrabold shadow-lg shadow-indigo-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none inline-flex items-center gap-2">
+          <span>🚀 Start Practice</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PRACTICE VIEW ==================== -->
+  <div id="practiceView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <header class="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-soft mb-6 flex flex-wrap items-center justify-between gap-3 sticky top-4 z-30">
+      <div class="flex items-center gap-3 min-w-0">
+        <a href="index.html" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-extrabold transition shrink-0">
+          <span>← Library</span>
+        </a>
+        <div class="min-w-0">
+          <h2 id="practiceBookTitle" class="text-lg sm:text-xl font-extrabold text-slate-900 truncate">Book Title</h2>
+          <p id="practiceTopicTitle" class="text-xs font-semibold text-indigo-600 truncate">Topic Title</p>
+        </div>
+      </div>
+      <button id="resetPracticeBtn" class="px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-sm font-bold transition border border-rose-200 shrink-0">
+        ↻ Choose New Topic
+      </button>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <!-- Original Text Column -->
+      <div class="bg-white rounded-3xl border border-slate-200/90 shadow-card p-6 sm:p-8">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+          <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm">📖</span>
+            Original Text
+          </h3>
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:block">Read this carefully</span>
+        </div>
+        <div id="originalTextDisplay" class="reader-prose max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+          <!-- Markdown rendered here -->
+        </div>
+      </div>
+
+      <!-- Speech Practice Column -->
+      <div class="bg-white rounded-3xl border border-slate-200/90 shadow-card p-6 sm:p-8 flex flex-col">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+          <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm">🎙️</span>
+            Your Reading
+          </h3>
+          <span id="recordingStatus" class="hidden px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200 items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+            Listening...
+          </span>
+        </div>
+
+        <div id="transcriptDisplay" class="flex-1 min-h-[250px] bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-5 text-slate-700 leading-relaxed mb-6 overflow-y-auto transition-all">
+          <span class="text-slate-400 italic">Press "Start Reading" and speak clearly. Your words will appear here...</span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center gap-3 mb-6">
+          <button id="toggleRecordingBtn" class="flex-1 w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-base font-extrabold shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2">
+            <span id="micIcon">🎙️</span>
+            <span id="micText">Start Reading</span>
+          </button>
+          <button id="checkAccuracyBtn" disabled class="flex-1 w-full px-6 py-4 rounded-2xl bg-slate-100 text-slate-400 text-base font-extrabold transition flex items-center justify-center gap-2 disabled:cursor-not-allowed">
+            <span>📊 Check Accuracy</span>
+          </button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden rounded-2xl border border-slate-200 bg-slate-50/50 p-5 transition-all">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-extrabold text-slate-700 uppercase tracking-wider">Practice Results</h4>
+            <button id="clearTranscriptBtn" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline">Clear & Retry</button>
+          </div>
+          
+          <div class="flex items-center gap-4 mb-4">
+            <div id="accuracyBadge" class="w-20 h-20 rounded-2xl flex flex-col items-center justify-center border-2 transition-all">
+              <span id="accuracyScore" class="text-2xl font-extrabold">0%</span>
+              <span class="text-[10px] font-bold uppercase">Match</span>
+            </div>
+            <div>
+              <h5 id="feedbackTitle" class="text-lg font-extrabold text-slate-900">Results</h5>
+              <p id="feedbackMessage" class="text-sm text-slate-600">Start practicing to see your accuracy score.</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-4 border border-slate-200">
+            <div class="text-xs font-bold text-slate-400 uppercase mb-1">What the system heard:</div>
+            <p id="finalSpokenText" class="text-sm text-slate-700 italic"></p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let readingData = null;
+    let selectedBook = null;
+    let selectedTopic = null;
+    let recognition = null;
+    let isListening = false;
+    let finalTranscript = '';
+
+    // DOM Elements
+    const selectionView = document.getElementById('selectionView');
+    const practiceView = document.getElementById('practiceView');
+    const bookSelect = document.getElementById('bookSelect');
+    const topicSelect = document.getElementById('topicSelect');
+    const startPracticeBtn = document.getElementById('startPracticeBtn');
+    const selectionError = document.getElementById('selectionError');
+
+    const practiceBookTitle = document.getElementById('practiceBookTitle');
+    const practiceTopicTitle = document.getElementById('practiceTopicTitle');
+    const originalTextDisplay = document.getElementById('originalTextDisplay');
+    const transcriptDisplay = document.getElementById('transcriptDisplay');
+    const toggleRecordingBtn = document.getElementById('toggleRecordingBtn');
+    const micIcon = document.getElementById('micIcon');
+    const micText = document.getElementById('micText');
+    const checkAccuracyBtn = document.getElementById('checkAccuracyBtn');
+    const recordingStatus = document.getElementById('recordingStatus');
+    const resultsSection = document.getElementById('resultsSection');
+    const accuracyBadge = document.getElementById('accuracyBadge');
+    const accuracyScore = document.getElementById('accuracyScore');
+    const feedbackTitle = document.getElementById('feedbackTitle');
+    const feedbackMessage = document.getElementById('feedbackMessage');
+    const finalSpokenText = document.getElementById('finalSpokenText');
+    const clearTranscriptBtn = document.getElementById('clearTranscriptBtn');
+    const resetPracticeBtn = document.getElementById('resetPracticeBtn');
+
+    // Initialize Speech Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        transcriptDisplay.textContent = finalTranscript + interimTranscript;
+        
+        if (finalTranscript.trim().length > 0 || interimTranscript.trim().length > 0) {
+          checkAccuracyBtn.disabled = false;
+          checkAccuracyBtn.classList.remove('bg-slate-100', 'text-slate-400');
+          checkAccuracyBtn.classList.add('bg-gradient-to-r', 'from-indigo-600', 'to-purple-600', 'text-white', 'shadow-md');
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        if (event.error === 'not-allowed') {
+          alert('Microphone access denied. Please allow microphone permissions in your browser settings.');
+          stopRecording();
+        } else if (event.error === 'no-speech') {
+          // Ignore no-speech errors, they happen often when pausing
+        } else {
+          transcriptDisplay.innerHTML += `<br><span class="text-rose-500 text-xs">[System Error: ${event.error}]</span>`;
+        }
+      };
+
+      recognition.onend = () => {
+        if (isListening) {
+          // Auto-restart if it stopped unexpectedly but we still want to listen
+          try { recognition.start(); } catch(e) {}
+        } else {
+          updateRecordingUI(false);
+        }
+      };
+    } else {
+      alert('Your browser does not support Speech Recognition. Please use Google Chrome or Microsoft Edge for this feature.');
+      toggleRecordingBtn.disabled = true;
+      toggleRecordingBtn.textContent = 'Not Supported';
+      toggleRecordingBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    function updateRecordingUI(listening) {
+      isListening = listening;
+      if (listening) {
+        recordingStatus.classList.remove('hidden');
+        recordingStatus.classList.add('flex');
+        toggleRecordingBtn.classList.remove('from-emerald-600', 'to-teal-600');
+        toggleRecordingBtn.classList.add('from-rose-600', 'to-orange-600', 'recording-pulse');
+        micIcon.textContent = '⏹️';
+        micText.textContent = 'Stop Reading';
+      } else {
+        recordingStatus.classList.add('hidden');
+        recordingStatus.classList.remove('flex');
+        toggleRecordingBtn.classList.add('from-emerald-600', 'to-teal-600');
+        toggleRecordingBtn.classList.remove('from-rose-600', 'to-orange-600', 'recording-pulse');
+        micIcon.textContent = '🎙️';
+        micText.textContent = 'Start Reading';
+      }
+    }
+
+    function startRecording() {
+      if (!recognition) return;
+      if (transcriptDisplay.textContent.includes('Press "Start Reading"')) {
+        finalTranscript = '';
+        transcriptDisplay.textContent = '';
+      }
+      try {
+        recognition.start();
+        updateRecordingUI(true);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function stopRecording() {
+      if (!recognition) return;
+      recognition.stop();
+      updateRecordingUI(false);
+    }
+
+    function toggleRecording() {
+      if (isListening) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    }
+
+    // Load Data from JSON
+    async function initData() {
+      try {
+        const res = await fetch('./reading_demo.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to load JSON');
+        readingData = await res.json();
+        populateBooks();
+      } catch (err) {
+        selectionError.classList.remove('hidden');
+        console.error(err);
+      }
+    }
+
+    function populateBooks() {
+      const books = readingData?.books || [];
+      bookSelect.innerHTML = '<option value="">-- Choose a Book --</option>';
+      books.forEach((book, idx) => {
+        const option = document.createElement('option');
+        option.value = idx;
+        option.textContent = book['Book-Name'] || 'Untitled Book';
+        bookSelect.appendChild(option);
+      });
+    }
+
+    bookSelect.addEventListener('change', (e) => {
+      const bookIdx = e.target.value;
+      topicSelect.innerHTML = '<option value="">-- Choose a Topic --</option>';
+      topicSelect.disabled = true;
+      topicSelect.className = 'w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-400 focus:outline-none transition cursor-not-allowed';
+      startPracticeBtn.disabled = true;
+      selectedBook = null;
+
+      if (bookIdx !== "") {
+        selectedBook = readingData.books[bookIdx];
+        const topics = selectedBook.topics || [];
+        topics.forEach((topic, idx) => {
+          const option = document.createElement('option');
+          option.value = idx;
+          option.textContent = `Topic ${topic['Topic-No'] || idx + 1}: ${topic['Topic-Title'] || 'Untitled'}`;
+          topicSelect.appendChild(option);
+        });
+        
+        topicSelect.disabled = false;
+        topicSelect.className = 'w-full rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-b from-white to-indigo-50/40 px-4 py-3.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 transition cursor-pointer';
+      }
+    });
+
+    topicSelect.addEventListener('change', (e) => {
+      const topicIdx = e.target.value;
+      startPracticeBtn.disabled = topicIdx === "";
+      selectedTopic = topicIdx !== "" ? selectedBook.topics[topicIdx] : null;
+    });
+
+    startPracticeBtn.addEventListener('click', () => {
+      if (!selectedBook || !selectedTopic) return;
+      
+      practiceBookTitle.textContent = selectedBook['Book-Name'];
+      practiceTopicTitle.textContent = `Topic ${selectedTopic['Topic-No'] || ''} — ${selectedTopic['Topic-Title'] || ''}`;
+      
+      const mdContent = selectedTopic['Topic-Content'] || 'No content available for this topic.';
+      originalTextDisplay.innerHTML = typeof marked !== 'undefined' ? marked.parse(mdContent) : `<p>${mdContent}</p>`;
+      
+      // Reset practice state
+      finalTranscript = '';
+      transcriptDisplay.innerHTML = '<span class="text-slate-400 italic">Press "Start Reading" and speak clearly. Your words will appear here...</span>';
+      resultsSection.classList.add('hidden');
+      checkAccuracyBtn.disabled = true;
+      checkAccuracyBtn.className = 'flex-1 w-full px-6 py-4 rounded-2xl bg-slate-100 text-slate-400 text-base font-extrabold transition flex items-center justify-center gap-2 disabled:cursor-not-allowed';
+      
+      selectionView.classList.add('hidden');
+      practiceView.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    resetPracticeBtn.addEventListener('click', () => {
+      stopRecording();
+      practiceView.classList.add('hidden');
+      selectionView.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    toggleRecordingBtn.addEventListener('click', toggleRecording);
+
+    checkAccuracyBtn.addEventListener('click', () => {
+      stopRecording();
+      const originalText = originalTextDisplay.innerText; // Extract plain text from rendered markdown
+      const spokenText = finalTranscript.trim();
+      
+      if (!spokenText) {
+        alert('Please speak something first before checking accuracy!');
+        return;
+      }
+
+      const similarity = calculateSimilarity(originalText, spokenText);
+      
+      resultsSection.classList.remove('hidden');
+      accuracyScore.textContent = `${similarity}%`;
+      finalSpokenText.textContent = spokenText || '(No clear speech detected)';
+      
+      accuracyBadge.className = 'w-20 h-20 rounded-2xl flex flex-col items-center justify-center border-2 transition-all';
+      if (similarity >= 80) {
+        accuracyBadge.classList.add('bg-emerald-100', 'text-emerald-700', 'border-emerald-200');
+        feedbackTitle.textContent = 'Excellent Job! 🌟';
+        feedbackMessage.textContent = 'Your pronunciation and word matching are highly accurate. Keep it up!';
+      } else if (similarity >= 50) {
+        accuracyBadge.classList.add('bg-amber-100', 'text-amber-700', 'border-amber-200');
+        feedbackTitle.textContent = 'Good Effort! 👍';
+        feedbackMessage.textContent = 'You got more than half of it right. Try reading a bit slower and clearer.';
+      } else {
+        accuracyBadge.classList.add('bg-rose-100', 'text-rose-700', 'border-rose-200');
+        feedbackTitle.textContent = 'Keep Practicing! 💪';
+        feedbackMessage.textContent = 'Don\'t worry, reading takes practice. Try again and focus on each word carefully.';
+      }
+      
+      setTimeout(() => {
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    });
+
+    clearTranscriptBtn.addEventListener('click', () => {
+      finalTranscript = '';
+      transcriptDisplay.innerHTML = '<span class="text-slate-400 italic">Press "Start Reading" and speak clearly. Your words will appear here...</span>';
+      resultsSection.classList.add('hidden');
+      checkAccuracyBtn.disabled = true;
+      checkAccuracyBtn.className = 'flex-1 w-full px-6 py-4 rounded-2xl bg-slate-100 text-slate-400 text-base font-extrabold transition flex items-center justify-center gap-2 disabled:cursor-not-allowed';
+    });
+
+    // Longest Common Subsequence (LCS) algorithm for robust word-level similarity
+    function calculateSimilarity(str1, str2) {
+      const clean = (text) => text.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+      const words1 = clean(str1).split(' ').filter(w => w.length > 0);
+      const words2 = clean(str2).split(' ').filter(w => w.length > 0);
+      
+      if (words1.length === 0) return 100;
+      
+      const lcs = (a, b) => {
+        const dp = Array(a.length + 1).fill().map(() => Array(b.length + 1).fill(0));
+        for (let i = 1; i <= a.length; i++) {
+          for (let j = 1; j <= b.length; j++) {
+            if (a[i-1] === b[j-1]) {
+              dp[i][j] = dp[i-1][j-1] + 1;
+            } else {
+              dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+            }
+          }
+        }
+        return dp[a.length][b.length];
+      };
+      
+      const matches = lcs(words1, words2);
+      const accuracy = Math.round((matches / words1.length) * 100);
+      return Math.min(accuracy, 100); // Cap at 100%
+    }
+
+    // Initialize app
+    initData();
+  </script>
+</body>
+</html>
